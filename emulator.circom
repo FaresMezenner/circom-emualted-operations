@@ -111,6 +111,38 @@ template EmulatedBitShifting(bits) {
 
 
 
+template EmulatedBitwiseAnd(bits) {
+
+    assert(bits<=254);
+
+
+    signal input x;
+    signal input y;
+    signal output out;
+
+    // range checking
+    component n2bX = Num2Bits(bits);
+    component n2bY = Num2Bits(bits);
+    n2bX.in <== x;
+    n2bY.in <== y;
+
+    // doing AND bit by bit
+    component b2n = Bits2Num(bits);
+    component ands[bits];
+    for (var i = 0; i<bits; i++) {
+        ands[i] = AND();
+        ands[i].a <== n2bX.out[i];
+        ands[i].b <== n2bY.out[i];
+        b2n.in[i] <== ands[i].out;
+    }
+
+    out <== b2n.out;
+
+}
+
+
+
+
 
 template Emulator(bits){
 
@@ -119,12 +151,14 @@ template Emulator(bits){
     signal input in[2];
     // signal output out[2];
     // signal output divOut[2];
-    signal output bitShiftingOut;
+    // signal output bitShiftingOut;
+    signal output bitWiseAndOut;
 
     // component add = EmulatedAdd(bits);
     // component mul = EmulatedMul(bits);
     // component div = EmulatedDivMod(bits);
-    component bitShifting = EmulatedBitShifting(bits);
+    // component bitShifting = EmulatedBitShifting(bits);
+    component bitWiseAnd = EmulatedBitwiseAnd(bits);
 
     // add.x <== in[0];
     // add.y <== in[1];
@@ -135,15 +169,17 @@ template Emulator(bits){
     // div.x <== in[0];
     // div.y <== in[1];
 
+    // bitShifting.in <== in[0];
+    // bitShifting.shift <== in[1];
 
-    bitShifting.in <== in[0];
-    bitShifting.shift <== in[1];
+    bitWiseAnd.x <== in[0];
+    bitWiseAnd.y <== in[1];
 
     // out[0] <== add.out;
     // out[1] <== mul.out;
     // divOut[0] <== div.q;
     // divOut[1] <== div.r;
-    bitShiftingOut <== bitShifting.out;
+    bitWiseAndOut <== bitWiseAnd.out;
 
 
 
@@ -154,5 +190,5 @@ template Emulator(bits){
 component main = Emulator(32);
 
 /* INPUT = {
-    "in": [3, 33]
+    "in": [6, 5]
 } */
