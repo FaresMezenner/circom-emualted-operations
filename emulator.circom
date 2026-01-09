@@ -77,6 +77,51 @@ template EmulatedMul(bits) {
 
 
 
+template EmulatedDivMod(bits) {
+
+    assert(bits < 125);
+
+    signal input x;
+    signal input y;
+    signal output q;
+    signal output r;
+
+    q <-- x \ y;
+    r <-- x % y;
+
+
+    // range checking
+    component rangeCheckX = RangeCheck(bits);
+    component rangeCheckY = RangeCheck(bits);
+    component rangeCheckR = RangeCheck(bits);
+    component rangeCheckP = RangeCheck(bits);
+    rangeCheckX.in <== x;
+    rangeCheckY.in <== y;
+    rangeCheckR.in <== r;
+    rangeCheckP.in <== q;
+
+    // core constraint
+    x === y*q + r;
+
+
+    // making sure that the remainder is less than the denominator
+    signal remainderLessThanDenominator <== LessThan(bits)([r, y]);
+    remainderLessThanDenominator === 1;
+
+
+    // constraining the denominator to not be zero
+    signal isDZero <== IsZero()(y);
+    isDZero === 0;
+
+    
+
+
+    
+}
+
+
+
+
 
 template Emulator(bits){
 
@@ -84,9 +129,11 @@ template Emulator(bits){
 
     signal input in[2];
     signal output out[2];
+    signal output divOut[2];
 
     component add = EmulatedAdd(bits);
     component mul = EmulatedMul(bits);
+    component div = EmulatedDivMod(bits);
 
     add.x <== in[0];
     add.y <== in[1];
@@ -94,8 +141,13 @@ template Emulator(bits){
     mul.x <== in[0];
     mul.y <== in[1];
 
+    div.x <== in[0];
+    div.y <== in[1];
+
     out[0] <== add.out;
     out[1] <== mul.out;
+    divOut[0] <== div.q;
+    divOut[1] <== div.r;
 
 
 
@@ -106,5 +158,5 @@ template Emulator(bits){
 component main = Emulator(32);
 
 /* INPUT = {
-    "in": [2147483648, 2]
+    "in": [2147483649, 2]
 } */
