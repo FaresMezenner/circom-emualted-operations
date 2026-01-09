@@ -2,6 +2,7 @@
 
 include "node_modules/circomlib/circuits/gates.circom";
 include "node_modules/circomlib/circuits/comparators.circom";
+include "node_modules/circomlib/circuits/multiplexer.circom";
 
 template RangeCheck(bits) {
     signal input in;
@@ -77,46 +78,34 @@ template EmulatedMul(bits) {
 
 
 
-template EmulatedDivMod(bits) {
+template EmulatedBitShifting(bits) {
 
-    assert(bits < 125);
+    assert(bits<=254);
 
-    signal input x;
-    signal input y;
-    signal output q;
-    signal output r;
-
-    q <-- x \ y;
-    r <-- x % y;
+    signal input in;
+    signal input shift;
+    signal output out;
 
 
-    // range checking
-    component rangeCheckX = RangeCheck(bits);
-    component rangeCheckY = RangeCheck(bits);
-    component rangeCheckR = RangeCheck(bits);
-    component rangeCheckP = RangeCheck(bits);
-    rangeCheckX.in <== x;
-    rangeCheckY.in <== y;
-    rangeCheckR.in <== r;
-    rangeCheckP.in <== q;
+    component rangeCheckIn = RangeCheck(bits);
+    rangeCheckIn.in <== in;
 
-    // core constraint
-    x === y*q + r;
+    // pre compute all values of 2^{bits-1}, and for powers above bits-1, we just replace it with zero, because shifting with that amount will give zero amyways
+    component powerSelector = Multiplexer(1, 254);
+    powerSelector.inp[0][0] <== 1;
+    var currentPower = 1;
+    for (var i = 1; i <bits; i++) {
+        currentPower = currentPower << 1;
+        powerSelector.inp[i][0] <== currentPower;
+    }
+    for (var i = bits; i <254; i++) {
+        powerSelector.inp[i][0] <== 0;
+    }
 
+    // the selector of what power of two to use
+    powerSelector.sel <== shift;
+    out <== powerSelector.out[0]*in;
 
-    // making sure that the remainder is less than the denominator
-    signal remainderLessThanDenominator <== LessThan(bits)([r, y]);
-    remainderLessThanDenominator === 1;
-
-
-    // constraining the denominator to not be zero
-    signal isDZero <== IsZero()(y);
-    isDZero === 0;
-
-    
-
-
-    
 }
 
 
@@ -128,26 +117,33 @@ template Emulator(bits){
     
 
     signal input in[2];
-    signal output out[2];
-    signal output divOut[2];
+    // signal output out[2];
+    // signal output divOut[2];
+    signal output bitShiftingOut;
 
-    component add = EmulatedAdd(bits);
-    component mul = EmulatedMul(bits);
-    component div = EmulatedDivMod(bits);
+    // component add = EmulatedAdd(bits);
+    // component mul = EmulatedMul(bits);
+    // component div = EmulatedDivMod(bits);
+    component bitShifting = EmulatedBitShifting(bits);
 
-    add.x <== in[0];
-    add.y <== in[1];
+    // add.x <== in[0];
+    // add.y <== in[1];
 
-    mul.x <== in[0];
-    mul.y <== in[1];
+    // mul.x <== in[0];
+    // mul.y <== in[1];
 
-    div.x <== in[0];
-    div.y <== in[1];
+    // div.x <== in[0];
+    // div.y <== in[1];
 
-    out[0] <== add.out;
-    out[1] <== mul.out;
-    divOut[0] <== div.q;
-    divOut[1] <== div.r;
+
+    bitShifting.in <== in[0];
+    bitShifting.shift <== in[1];
+
+    // out[0] <== add.out;
+    // out[1] <== mul.out;
+    // divOut[0] <== div.q;
+    // divOut[1] <== div.r;
+    bitShiftingOut <== bitShifting.out;
 
 
 
@@ -158,5 +154,5 @@ template Emulator(bits){
 component main = Emulator(32);
 
 /* INPUT = {
-    "in": [2147483649, 2]
+    "in": [3, 33]
 } */
