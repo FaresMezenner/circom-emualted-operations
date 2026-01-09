@@ -142,6 +142,93 @@ template EmulatedBitwiseAnd(bits) {
 
 
 
+template EmulatedBitwiseNot(bits) {
+
+    assert(bits<=254);
+
+
+    signal input x;
+    signal output out;
+
+    // range checking
+    component n2bX = Num2Bits(bits);
+    n2bX.in <== x;
+
+    // doing NOT bit by bit
+    component b2n = Bits2Num(bits);
+    component nots[bits];
+    for (var i = 0; i<bits; i++) {
+        nots[i] = NOT();
+        nots[i].in <== n2bX.out[i];
+        b2n.in[i] <== nots[i].out;
+    }
+
+    out <== b2n.out;
+
+}
+
+
+
+template EmulatedBitwiseOr(bits) {
+
+    assert(bits<=254);
+
+
+    signal input x;
+    signal input y;
+    signal output out;
+
+    // range checking
+    component n2bX = Num2Bits(bits);
+    component n2bY = Num2Bits(bits);
+    n2bX.in <== x;
+    n2bY.in <== y;
+
+    // doing OR bit by bit
+    component b2n = Bits2Num(bits);
+    component ors[bits];
+    for (var i = 0; i<bits; i++) {
+        ors[i] = OR();
+        ors[i].a <== n2bX.out[i];
+        ors[i].b <== n2bY.out[i];
+        b2n.in[i] <== ors[i].out;
+    }
+
+    out <== b2n.out;
+
+}
+
+
+
+template EmulatedBitwiseXor(bits) {
+
+    assert(bits<=254);
+
+
+    signal input x;
+    signal input y;
+    signal output out;
+
+    // range checking
+    component n2bX = Num2Bits(bits);
+    component n2bY = Num2Bits(bits);
+    n2bX.in <== x;
+    n2bY.in <== y;
+
+    // doing XOR bit by bit
+    component b2n = Bits2Num(bits);
+    component xors[bits];
+    for (var i = 0; i<bits; i++) {
+        xors[i] = XOR();
+        xors[i].a <== n2bX.out[i];
+        xors[i].b <== n2bY.out[i];
+        b2n.in[i] <== xors[i].out;
+    }
+
+    out <== b2n.out;
+
+}
+
 
 
 template Emulator(bits){
@@ -153,12 +240,18 @@ template Emulator(bits){
     // signal output divOut[2];
     // signal output bitShiftingOut;
     signal output bitWiseAndOut;
+    signal output bitWiseOrOut;
+    signal output bitWiseXorOut;
+    signal output bitWiseNotOut;
 
     // component add = EmulatedAdd(bits);
     // component mul = EmulatedMul(bits);
     // component div = EmulatedDivMod(bits);
     // component bitShifting = EmulatedBitShifting(bits);
     component bitWiseAnd = EmulatedBitwiseAnd(bits);
+    component bitWiseOr = EmulatedBitwiseOr(bits);
+    component bitWiseXor = EmulatedBitwiseXor(bits);
+    component bitWiseNot = EmulatedBitwiseNot(bits);
 
     // add.x <== in[0];
     // add.y <== in[1];
@@ -175,11 +268,22 @@ template Emulator(bits){
     bitWiseAnd.x <== in[0];
     bitWiseAnd.y <== in[1];
 
+    bitWiseOr.x <== in[0];
+    bitWiseOr.y <== in[1];
+
+    bitWiseXor.x <== in[0];
+    bitWiseXor.y <== in[1];
+
+    bitWiseNot.x <== in[0];
+
     // out[0] <== add.out;
     // out[1] <== mul.out;
     // divOut[0] <== div.q;
     // divOut[1] <== div.r;
     bitWiseAndOut <== bitWiseAnd.out;
+    bitWiseOrOut <== bitWiseOr.out;
+    bitWiseXorOut <== bitWiseXor.out;
+    bitWiseNotOut <== bitWiseNot.out;
 
 
 
