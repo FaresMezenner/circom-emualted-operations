@@ -11,6 +11,7 @@ template RangeCheck(bits) {
     n2b.in <== in;
 }
 
+
 template EmulatedAdd(bits){
     signal input x;
     signal input y;
@@ -76,6 +77,64 @@ template EmulatedMul(bits) {
 
 
 
+
+template EmulatedLeftRotate(bits) {
+
+    assert(bits<=254);
+
+    signal input in;
+    signal input shift;
+    signal output out;
+
+    // getting bits representation AND the checking the range
+    component n2b = Num2Bits(bits);
+    n2b.in <== in;
+
+    // pre compute all the possible shifted values
+    component shiftedValuesCalcs[bits];
+    component shiftSelector = Multiplexer(1, 254);
+    for (var i = 0; i <bits; i++) {
+        shiftedValuesCalcs[i] = Bits2Num(bits);
+            
+        for (var j = 0; j < i; j++) {
+            shiftedValuesCalcs[i].in[j] <== n2b.out[bits-i+j];
+        }
+
+        for (var j = i; j < bits; j++) {
+            shiftedValuesCalcs[i].in[j] <== 0;
+        }
+
+        shiftSelector.inp[i][0] <== shiftedValuesCalcs[i].out;
+    }
+    for (var i = bits; i <254; i++) {
+
+        shiftSelector.inp[i][0] <== 0;
+    }
+
+
+    // pre compute all values of 2^{bits-1}, and for powers above bits-1, we just replace it with zero, because shifting with that amount will give zero amyways
+    component powerSelector = Multiplexer(1, 254);
+    powerSelector.inp[0][0] <== 1;
+    var currentPower = 1;
+    for (var i = 1; i <bits; i++) {
+        currentPower = currentPower << 1;
+        powerSelector.inp[i][0] <== currentPower;
+    }
+    for (var i = bits; i <254; i++) {
+        powerSelector.inp[i][0] <== 0;
+    }
+
+    // the selector of what power of two to use
+    powerSelector.sel <== shift;
+    component firstPartCalc = EmulatedMul(bits);
+    firstPartCalc.x <== powerSelector.out[0];
+    firstPartCalc.y <== in;
+
+    // the selector of the second part
+    shiftSelector.sel <== shift;
+    out <== firstPartCalc.out + shiftSelector.out[0];
+
+}
 
 
 template EmulatedBitShifting(bits) {
